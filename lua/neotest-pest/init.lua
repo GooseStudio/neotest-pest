@@ -66,6 +66,13 @@ local is_callable = function(obj)
     return type(obj) == "function" or (type(obj) == "table" and obj.__call)
 end
 
+--@param path
+--@param testsuite
+--@retyrn boolean
+local is_testsuite = function(path, testsuite)
+    return string.find(string.lower(path), string.lower(testsuite))
+end
+
 ---@param args neotest.RunArgs
 ---@return neotest.RunSpec | nil
 function NeotestAdapter.build_spec(args)
@@ -74,11 +81,45 @@ function NeotestAdapter.build_spec(args)
 
     local binary = get_pest_cmd()
 
+    local test_directory = NeotestAdapter.root(position.path)
     local command = vim.tbl_flatten({
         binary,
         position.name ~= "tests" and position.path,
         "--log-junit=" .. results_path,
     })
+    local test_directory_arg = vim.tbl_flatten({
+        "--test-directory",
+        test_directory .. '/tests'
+    }
+    )
+    local phpunit_file = vim.tbl_flatten({
+        "-c",
+        test_directory .. '/phpunit.xml'
+    }
+    )
+    local command = vim.tbl_flatten({
+        binary,
+        position.name ~= "tests" and position.path,
+        "--log-junit=" .. results_path,
+    })
+    if (is_testsuite(position.path, "unit")) then
+        command = vim.tbl_flatten({
+            command,
+            "--testsuite=Unit"
+        })
+    elseif (is_testsuite(position.path, "integration")) then
+        command = vim.tbl_flatten({
+            command,
+            "--testsuite=Integration"
+        })
+    end
+
+    command = vim.tbl_flatten({
+        command,
+        phpunit_file,
+        test_directory_arg,
+    })
+
 
     if position.type == "test" then
         local script_args = vim.tbl_flatten({
@@ -91,6 +132,7 @@ function NeotestAdapter.build_spec(args)
             script_args,
         })
     end
+    logger.error(command)
 
     return {
         command = command,
