@@ -132,7 +132,6 @@ function NeotestAdapter.build_spec(args)
             script_args,
         })
     end
-    logger.error(command)
 
     return {
         command = command,
